@@ -17,7 +17,7 @@
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@nestjs/bullmq": "10.0.1",
+    "@nestjs/bullmq": "10.2.0",
     "@nestjs/cache-manager": "2.1.1",
     "@nestjs/common": "10.2.10",
     "@nestjs/config": "3.1.1",

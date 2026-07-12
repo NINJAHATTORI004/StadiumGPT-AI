@@ -4,6 +4,7 @@
   "private": true,
   "description": "The AI Operating System for FIFA World Cup 2026 smart stadium operations.",
   "license": "MIT",
+  "workspaces": ["backend", "frontend"],
 
   "scripts": {
     "dev": "concurrently \"npm run dev -w frontend\" \"npm run start:dev -w backend\"",

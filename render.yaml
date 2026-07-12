@@ -10,10 +10,7 @@ services:
       - key: API_PORT
         value: "4000"
       - key: CORS_ORIGIN
-        fromService:
-          type: web
-          name: stadiumgpt-frontend
-          property: url
+        value: https://stadiumgpt-frontend.onrender.com
       - key: DATABASE_URL
         fromDatabase:
           name: stadiumgpt-db
@@ -48,21 +45,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: stadiumgpt-backend
-          property: url
-          propertyPath: /api
+        value: https://stadiumgpt-backend.onrender.com/api
       - key: NEXT_PUBLIC_APP_URL
-        fromService:
-          type: web
-          name: stadiumgpt-frontend
-          property: url
+        value: https://stadiumgpt-frontend.onrender.com
       - key: NEXTAUTH_URL
-        fromService:
-          type: web
-          name: stadiumgpt-frontend
-          property: url
+        value: https://stadiumgpt-frontend.onrender.com
       - key: NEXTAUTH_SECRET
         generateValue: true
       - key: HOSTNAME

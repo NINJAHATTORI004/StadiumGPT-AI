@@ -19,10 +19,7 @@ services:
           name: stadiumgpt-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: stadiumgpt-redis
-          property: connectionString
+        value: redis://redacted@stadiumgpt-redis.internal:6379
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
@@ -40,10 +37,16 @@ services:
 
   - type: web
     name: stadiumgpt-frontend
-    env: static
+    env: node
+    region: oregon
+    plan: starter
     buildCommand: npm install && npm run build
-    staticPublishPath: frontend/.next-build/standalone
+    startCommand: node .next-build/standalone/server.js
+    healthCheckPath: /
+    rootDir: frontend
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: NEXT_PUBLIC_API_URL
         fromService:
           type: web
@@ -62,8 +65,10 @@ services:
           property: url
       - key: NEXTAUTH_SECRET
         generateValue: true
-      - key: NODE_ENV
-        value: production
+      - key: HOSTNAME
+        value: "0.0.0.0"
+      - key: PORT
+        value: "3000"
 
 databases:
   - name: stadiumgpt-db
@@ -71,10 +76,4 @@ databases:
     databaseName: stadiumgpt
     user: stadiumgpt
     postgresMajorVersion: 16
-    ipAllowList: []
-
-redis:
-  - name: stadiumgpt-redis
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
     ipAllowList: []

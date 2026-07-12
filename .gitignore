@@ -16,3 +16,5 @@ backend/prisma/dev.db
 backend/generated/
 playwright-report/
 test-results/
+
+.vercel

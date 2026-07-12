@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="StadiumGPT AI icon">
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <path d="M102 304c22 72 86 114 154 114s132-42 154-114" fill="none" stroke="#fff" stroke-width="32" stroke-linecap="round"/>
+  <path d="M122 248c32-62 80-96 134-96s102 34 134 96" fill="none" stroke="#f59e0b" stroke-width="32" stroke-linecap="round"/>
+  <circle cx="256" cy="258" r="54" fill="#fff"/>
+  <path d="M226 262h60M256 232v60" stroke="#0f766e" stroke-width="22" stroke-linecap="round"/>
+</svg>
+

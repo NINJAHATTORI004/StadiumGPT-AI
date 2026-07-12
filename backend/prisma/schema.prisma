@@ -1,0 +1,489 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Development: SQLite (file:./dev.db or DATABASE_URL env var)
+// Production: PostgreSQL (DATABASE_URL env var)
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  FAN
+  ORGANIZER
+  SECURITY
+  MEDICAL
+  VOLUNTEER
+  STAFF
+  ACCESSIBILITY
+  SUSTAINABILITY
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  TRIAGED
+  RESOLVED
+  CLOSED
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  COMPLETE
+  CANCELLED
+}
+
+enum RequestStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+  PUSH
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  passwordHash          String
+  name                  String
+  preferredLanguage     String                 @default("en-US")
+  phone                 String?
+  accessibilityNeeds    String?
+  roles                 UserRole[]
+  tickets               Ticket[]
+  parkingReservations   ParkingReservation[]
+  orders                Order[]
+  medicalRequests       MedicalRequest[]
+  reportedIncidents     SecurityIncident[]     @relation("IncidentReporter")
+  aiConversations       AiConversation[]
+  notifications         Notification[]
+  volunteerAssignments  VolunteerAssignment[]
+  accessibilityRequests AccessibilityRequest[]
+  auditLogs             AuditLog[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([email])
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        RoleName         @unique
+  description String
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  action      String           @unique
+  description String
+  roles       RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  countryCode String
+  players     Player[]
+  homeMatches Match[]  @relation("HomeTeam")
+  awayMatches Match[]  @relation("AwayTeam")
+}
+
+model Player {
+  id          String @id @default(cuid())
+  teamId      String
+  name        String
+  position    String
+  shirtNumber Int
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model Stadium {
+  id              String                 @id @default(cuid())
+  name            String
+  city            String
+  country         String
+  capacity        Int
+  latitude        Float
+  longitude       Float
+  seats           Seat[]
+  gates           Gate[]
+  routes          Route[]
+  matches         Match[]
+  parkingLots     ParkingLot[]
+  foodVendors     FoodVendor[]
+  crowdSensors    CrowdSensor[]
+  transportRoutes TransportRoute[]
+  carbonTracking  CarbonTracking[]
+}
+
+model Seat {
+  id             String   @id @default(cuid())
+  stadiumId      String
+  section        String
+  row            String
+  number         String
+  accessible     Boolean  @default(false)
+  companionSeat  Boolean  @default(false)
+  stadium        Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  tickets        Ticket[]
+
+  @@unique([stadiumId, section, row, number])
+  @@index([section])
+}
+
+model Match {
+  id             String             @id @default(cuid())
+  stadiumId      String
+  homeTeamId     String
+  awayTeamId     String
+  kickoffAt      DateTime
+  round          String
+  status         String             @default("SCHEDULED")
+  stadium        Stadium            @relation(fields: [stadiumId], references: [id])
+  homeTeam       Team               @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam       Team               @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  tickets        Ticket[]
+  carbonTracking CarbonTracking[]
+  analytics      AnalyticsMetric[]
+
+  @@index([kickoffAt])
+}
+
+model Ticket {
+  id        String   @id @default(cuid())
+  userId    String
+  matchId   String
+  seatId    String
+  qrCode    String   @unique
+  status    String   @default("ACTIVE")
+  user      User     @relation(fields: [userId], references: [id])
+  match     Match    @relation(fields: [matchId], references: [id])
+  seat      Seat     @relation(fields: [seatId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([matchId, seatId])
+}
+
+model ParkingLot {
+  id           String               @id @default(cuid())
+  stadiumId    String
+  name         String
+  latitude     Float
+  longitude    Float
+  capacity     Int
+  accessible   Boolean              @default(false)
+  evChargers   Int                  @default(0)
+  stadium      Stadium              @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  reservations ParkingReservation[]
+}
+
+model ParkingReservation {
+  id        String     @id @default(cuid())
+  userId    String
+  lotId     String
+  startsAt  DateTime
+  endsAt    DateTime
+  plate     String?
+  user      User       @relation(fields: [userId], references: [id])
+  lot       ParkingLot @relation(fields: [lotId], references: [id])
+}
+
+model Gate {
+  id          String   @id @default(cuid())
+  stadiumId   String
+  name        String
+  latitude    Float
+  longitude   Float
+  accessible  Boolean  @default(false)
+  open        Boolean  @default(true)
+  queueMinute Int      @default(0)
+  stadium     Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+}
+
+model Route {
+  id               String      @id @default(cuid())
+  stadiumId        String
+  name             String
+  fromLabel        String
+  toLabel          String
+  distanceMeters   Int
+  durationMinutes  Int
+  accessible       Boolean     @default(false)
+  carbonGramsSaved Int         @default(0)
+  stadium          Stadium     @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  steps            RouteStep[]
+}
+
+model RouteStep {
+  id        String @id @default(cuid())
+  routeId   String
+  sequence  Int
+  text      String
+  latitude  Float?
+  longitude Float?
+  route     Route  @relation(fields: [routeId], references: [id], onDelete: Cascade)
+}
+
+model FoodVendor {
+  id          String     @id @default(cuid())
+  stadiumId   String
+  name        String
+  section     String
+  cuisine     String
+  accessible  Boolean    @default(true)
+  waitMinutes Int        @default(0)
+  stadium     Stadium    @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  menuItems   MenuItem[]
+  orders      Order[]
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  vendorId    String
+  name        String
+  priceCents  Int
+  allergens   String[]
+  vegetarian  Boolean     @default(false)
+  vendor      FoodVendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  vendorId    String
+  status      OrderStatus @default(PENDING)
+  totalCents  Int
+  pickupCode  String      @unique
+  createdAt   DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id])
+  vendor      FoodVendor  @relation(fields: [vendorId], references: [id])
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model MedicalRequest {
+  id             String        @id @default(cuid())
+  requesterId    String
+  matchId        String?
+  location       String
+  latitude       Float?
+  longitude      Float?
+  description    String
+  severity       Severity      @default(MEDIUM)
+  status         RequestStatus @default(OPEN)
+  assignedTeam   String?
+  responseDueAt  DateTime?
+  requester      User          @relation(fields: [requesterId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([severity, status])
+}
+
+model SecurityIncident {
+  id          String         @id @default(cuid())
+  reporterId  String
+  matchId     String?
+  location    String
+  latitude    Float?
+  longitude   Float?
+  category    String
+  description String
+  severity    Severity       @default(MEDIUM)
+  status      IncidentStatus @default(OPEN)
+  aiSummary   String?
+  reporter    User           @relation("IncidentReporter", fields: [reporterId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([severity, status])
+}
+
+model CrowdSensor {
+  id          String         @id @default(cuid())
+  stadiumId   String
+  zone        String
+  latitude    Float
+  longitude   Float
+  sensorType  String
+  stadium     Stadium        @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  readings    CrowdReading[]
+}
+
+model CrowdReading {
+  id           String      @id @default(cuid())
+  sensorId     String
+  density      Float
+  flowRate     Float
+  queueMinutes Int
+  risk         Severity    @default(LOW)
+  recordedAt   DateTime    @default(now())
+  sensor       CrowdSensor @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+
+  @@index([recordedAt])
+}
+
+model AiConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  module    String
+  language  String      @default("en-US")
+  title     String
+  user      User        @relation(fields: [userId], references: [id])
+  messages  AiMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  citations      String[]
+  createdAt      DateTime       @default(now())
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  channel   NotificationChannel @default(IN_APP)
+  severity  Severity            @default(LOW)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VolunteerAssignment {
+  id          String        @id @default(cuid())
+  userId      String
+  role        String
+  location    String
+  startsAt    DateTime
+  endsAt      DateTime
+  status      RequestStatus @default(ASSIGNED)
+  instructions String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TransportRoute {
+  id             String          @id @default(cuid())
+  stadiumId      String
+  name           String
+  mode           String
+  provider       String
+  headwayMinutes Int
+  co2GramsSaved  Int
+  stadium        Stadium         @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  stops          TransportStop[]
+}
+
+model TransportStop {
+  id        String         @id @default(cuid())
+  routeId   String
+  name      String
+  sequence  Int
+  latitude  Float
+  longitude Float
+  route     TransportRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+}
+
+model AccessibilityRequest {
+  id          String        @id @default(cuid())
+  userId      String
+  category    String
+  description String
+  location    String?
+  status      RequestStatus @default(OPEN)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model CarbonTracking {
+  id               String   @id @default(cuid())
+  stadiumId        String
+  matchId          String?
+  category         String
+  co2eKg           Float
+  recommendation   String
+  recordedAt       DateTime @default(now())
+  stadium          Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  match            Match?   @relation(fields: [matchId], references: [id])
+}
+
+model AnalyticsMetric {
+  id        String   @id @default(cuid())
+  matchId   String?
+  key       String
+  value     Float
+  unit      String
+  dimension String?
+  recordedAt DateTime @default(now())
+  match     Match?   @relation(fields: [matchId], references: [id])
+
+  @@index([key, recordedAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([action, createdAt])
+}

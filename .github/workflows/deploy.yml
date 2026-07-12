@@ -1,0 +1,141 @@
+name: Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test backend
+        run: npm run test -w backend
+
+  build-and-push:
+    needs: [validate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    needs: [build-and-push]
+    if: github.event.inputs.environment == 'staging' || github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging-stadiumgpt.railway.app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy backend to Railway
+        run: railway up --service stadiumgpt-backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Run database migrations
+        run: railway run --service stadiumgpt-backend "npx prisma migrate deploy"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Seed production database
+        run: railway run --service stadiumgpt-backend "npx prisma db seed"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy frontend to Vercel
+        run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+        working-directory: frontend
+
+  deploy-production:
+    needs: [build-and-push]
+    if: github.event.inputs.environment == 'production' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://stadiumgpt.ai
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy backend to Railway (production)
+        run: railway up --service stadiumgpt-backend --environment production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Run database migrations (production)
+        run: railway run --service stadiumgpt-backend --environment production "npx prisma migrate deploy"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy frontend to Vercel (production)
+        run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+        working-directory: frontend

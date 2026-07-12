@@ -1,0 +1,26 @@
+{
+  "authLogin": {
+    "accessToken": "eyJhbGciOi...",
+    "user": {
+      "id": "usr_123",
+      "email": "organizer@stadiumgpt.ai",
+      "name": "Operations Organizer",
+      "roles": ["ORGANIZER"]
+    }
+  },
+  "aiChat": {
+    "module": "ORGANIZER",
+    "answer": "Gate C is trending toward high congestion. Add two volunteers, open the north overflow lane, and redirect fans with accessibility needs to Gate D.",
+    "confidence": 0.91,
+    "citations": ["crowd_sensor:north_plaza", "route:accessible_gate_d"],
+    "actions": ["DISPATCH_VOLUNTEERS", "OPEN_OVERFLOW_LANE", "SEND_NOTIFICATION"]
+  },
+  "crowdReading": {
+    "zone": "North Plaza",
+    "density": 0.78,
+    "queueMinutes": 14,
+    "risk": "ELEVATED",
+    "updatedAt": "2026-06-14T18:10:00.000Z"
+  }
+}
+

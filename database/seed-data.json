@@ -1,0 +1,22 @@
+{
+  "demoPassword": "StadiumGPT2026!",
+  "users": [
+    "admin@stadiumgpt.ai",
+    "fan@stadiumgpt.ai",
+    "organizer@stadiumgpt.ai",
+    "security@stadiumgpt.ai",
+    "medical@stadiumgpt.ai",
+    "volunteer@stadiumgpt.ai"
+  ],
+  "stadium": "MetLife Stadium",
+  "match": "United States vs Canada",
+  "primaryUseCases": [
+    "accessible route planning",
+    "crowd prediction",
+    "medical request triage",
+    "security incident command",
+    "volunteer assignment",
+    "carbon tracking"
+  ]
+}
+

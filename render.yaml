@@ -1,0 +1,80 @@
+services:
+  - type: web
+    name: stadiumgpt-backend
+    env: docker
+    dockerfilePath: docker/backend.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "4000"
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: stadiumgpt-frontend
+          property: url
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stadiumgpt-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: stadiumgpt-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: REFRESH_TOKEN_EXPIRES_IN
+        value: 7d
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: OPENAI_EMBEDDING_MODEL
+        value: text-embedding-3-small
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  - type: web
+    name: stadiumgpt-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: frontend/.next-build/standalone
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: stadiumgpt-backend
+          property: url
+          propertyPath: /api
+      - key: NEXT_PUBLIC_APP_URL
+        fromService:
+          type: web
+          name: stadiumgpt-frontend
+          property: url
+      - key: NEXTAUTH_URL
+        fromService:
+          type: web
+          name: stadiumgpt-frontend
+          property: url
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: stadiumgpt-db
+    plan: starter
+    databaseName: stadiumgpt
+    user: stadiumgpt
+    postgresMajorVersion: 16
+    ipAllowList: []
+
+redis:
+  - name: stadiumgpt-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []

@@ -28,7 +28,9 @@ export class UsersService {
 
     return {
       ...user,
-      roles: user.roles.map((item) => item.role.name)
+      roles: user.roles
+        .map((item) => item.role?.name)
+        .filter((name): boolean => typeof name === "string")
     };
   }
 }

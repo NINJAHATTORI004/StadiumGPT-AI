@@ -29,6 +29,12 @@ services:
         value: gpt-4.1-mini
       - key: OPENAI_EMBEDDING_MODEL
         value: text-embedding-3-small
+      - key: ZENMUX_API_KEY
+        sync: false
+      - key: ZENMUX_MODEL
+        value: moonshotai/kimi-k3
+      - key: ZENMUX_BASE_URL
+        value: https://zenmux.ai/api/v1
     healthCheckPath: /api/health
     autoDeploy: true
 

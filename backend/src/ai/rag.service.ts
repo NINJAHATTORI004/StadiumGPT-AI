@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import OpenAI from "openai";
 
 const knowledgeBase = [
   {
@@ -27,15 +27,14 @@ const knowledgeBase = [
 
 @Injectable()
 export class RagService {
-  private readonly embeddings?: OpenAIEmbeddings;
+  private readonly openai?: OpenAI;
+  private readonly embeddingsModel: string;
 
   constructor(config: ConfigService) {
     const apiKey = config.get<string>("OPENAI_API_KEY");
+    this.embeddingsModel = config.get<string>("OPENAI_EMBEDDING_MODEL") ?? "text-embedding-3-small";
     if (apiKey) {
-      this.embeddings = new OpenAIEmbeddings({
-        apiKey,
-        model: config.get<string>("OPENAI_EMBEDDING_MODEL") ?? "text-embedding-3-small"
-      });
+      this.openai = new OpenAI({ apiKey });
     }
   }
 
@@ -51,11 +50,17 @@ export class RagService {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
 
-    if (this.embeddings) {
-      await this.embeddings.embedQuery(query);
+    if (this.openai) {
+      try {
+        await this.openai.embeddings.create({
+          model: this.embeddingsModel,
+          input: query
+        });
+      } catch {
+        // Keyword ranking still gives offline context if embeddings are unavailable.
+      }
     }
 
     return ranked.map(({ id, text, role: itemRole }) => ({ id, text, role: itemRole }));
   }
 }
-

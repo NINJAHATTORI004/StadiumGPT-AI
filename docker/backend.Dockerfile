@@ -19,5 +19,4 @@ COPY --from=build /app/backend/dist ./backend/dist
 COPY --from=build /app/backend/package.json ./backend/package.json
 COPY --from=build /app/backend/prisma ./backend/prisma
 EXPOSE 4000
-CMD ["node", "backend/dist/main.js"]
-
+CMD ["node", "backend/dist/src/main.js"]

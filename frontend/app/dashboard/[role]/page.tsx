@@ -5,15 +5,15 @@ import { dashboardRoles } from "@/lib/data";
 type DashboardRole = (typeof dashboardRoles)[number];
 
 type PageProps = {
-  params: Promise<{ role: string }>;
+  params: { role: string };
 };
 
 export function generateStaticParams() {
   return dashboardRoles.map((role) => ({ role }));
 }
 
-export default async function DashboardPage({ params }: PageProps) {
-  const { role } = await params;
+export default function DashboardPage({ params }: PageProps) {
+  const { role } = params;
 
   if (!dashboardRoles.includes(role as DashboardRole)) {
     notFound();

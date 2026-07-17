@@ -15,5 +15,10 @@ export class AiChatDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @ApiProperty({ example: "openai", required: false, enum: ["openai", "zenmux"] })
+  @IsOptional()
+  @IsIn(["openai", "zenmux"])
+  provider?: string;
 }
 

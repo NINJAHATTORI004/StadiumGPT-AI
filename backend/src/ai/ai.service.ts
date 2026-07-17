@@ -17,20 +17,63 @@ const modulePolicies: Record<string, string> = {
   MEDICAL: "Support medical request prioritization, route responders, and escalate urgent medical decisions to medical command."
 };
 
+export type AiProvider = "openai" | "zenmux";
+type AiResponseProvider = AiProvider | "local";
+type TtsVoice = "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";
+
+const ttsVoices: readonly TtsVoice[] = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+
+function isTtsVoice(voice?: string): voice is TtsVoice {
+  return !!voice && ttsVoices.includes(voice as TtsVoice);
+}
+
 @Injectable()
 export class AiService {
   private readonly openai?: OpenAI;
-  private readonly model: string;
+  private readonly openaiModel: string;
+  private readonly zenmux?: OpenAI;
+  private readonly zenmuxModel: string;
 
   constructor(
     config: ConfigService,
     private readonly rag: RagService
   ) {
-    const apiKey = config.get<string>("OPENAI_API_KEY");
-    this.model = config.get<string>("OPENAI_MODEL") ?? "gpt-4.1-mini";
-    if (apiKey) {
-      this.openai = new OpenAI({ apiKey });
+    // OpenAI provider
+    const openaiApiKey = config.get<string>("OPENAI_API_KEY");
+    this.openaiModel = config.get<string>("OPENAI_MODEL") ?? "gpt-4.1-mini";
+    if (openaiApiKey) {
+      this.openai = new OpenAI({ apiKey: openaiApiKey });
     }
+
+    // ZenMux provider uses the OpenAI SDK with a custom base URL.
+    const zenmuxApiKey = config.get<string>("ZENMUX_API_KEY");
+    this.zenmuxModel =
+      config.get<string>("ZENMUX_MODEL") ?? "moonshotai/kimi-k3";
+    if (zenmuxApiKey) {
+      this.zenmux = new OpenAI({
+        apiKey: zenmuxApiKey,
+        baseURL:
+          config.get<string>("ZENMUX_BASE_URL") ??
+          "https://zenmux.ai/api/v1"
+      });
+    }
+  }
+
+  /** Resolve which OpenAI client to use based on the requested provider. */
+  private resolveClient(
+    provider?: AiProvider
+  ): { client: OpenAI; model: string; provider: AiProvider } | undefined {
+    if (provider === "zenmux") {
+      if (!this.zenmux) return undefined;
+      return { client: this.zenmux, model: this.zenmuxModel, provider: "zenmux" };
+    }
+    if (provider === "openai") {
+      if (!this.openai) return undefined;
+      return { client: this.openai, model: this.openaiModel, provider: "openai" };
+    }
+    if (this.openai) return { client: this.openai, model: this.openaiModel, provider: "openai" };
+    if (this.zenmux) return { client: this.zenmux, model: this.zenmuxModel, provider: "zenmux" };
+    return undefined;
   }
 
   async chat(user: JwtUser, dto: AiChatDto) {
@@ -42,38 +85,46 @@ export class AiService {
       "For medical, security, or evacuation emergencies, recommend immediate escalation to on-site command."
     ].join(" ");
 
-    if (this.openai) {
-      const completion = await this.openai.chat.completions.create({
-        model: this.model,
+    const requestedProvider = dto.provider as AiProvider | undefined;
+    const resolved = this.resolveClient(requestedProvider);
+
+    if (!resolved) {
+      return this.fallbackResponse(dto, context, requestedProvider ?? "local");
+    }
+
+    const { client, model, provider } = resolved;
+
+    try {
+      const completion = await client.chat.completions.create({
+        model,
         temperature: 0.2,
         messages: [
           { role: "system", content: system },
-          { role: "user", content: `User: ${user.email}\nLanguage: ${dto.language ?? "en-US"}\nContext: ${JSON.stringify(context)}\nQuestion: ${dto.message}` }
+          {
+            role: "user",
+            content: `User: ${user.email}\nLanguage: ${dto.language ?? "en-US"}\nContext: ${JSON.stringify(context)}\nQuestion: ${dto.message}`
+          }
         ]
       });
 
       return {
         module: dto.module,
+        provider,
         answer: completion.choices[0]?.message?.content ?? this.localAnswer(dto, context),
-        confidence: 0.91,
+        confidence: provider === "zenmux" ? 0.95 : 0.91,
         citations: context.map((item) => item.id),
         actions: this.actionsFor(dto.module)
       };
+    } catch {
+      return this.fallbackResponse(dto, context, provider);
     }
-
-    return {
-      module: dto.module,
-      answer: this.localAnswer(dto, context),
-      confidence: 0.74,
-      citations: context.map((item) => item.id),
-      actions: this.actionsFor(dto.module)
-    };
   }
 
   async transcribe(file?: Express.Multer.File) {
     if (!file) {
       throw new ServiceUnavailableException("Audio file is required.");
     }
+    // Transcription always uses OpenAI Whisper
     if (!this.openai) {
       throw new ServiceUnavailableException("OPENAI_API_KEY is required for Whisper transcription.");
     }
@@ -87,13 +138,14 @@ export class AiService {
   }
 
   async speak(dto: SpeakDto) {
+    // TTS always uses OpenAI
     if (!this.openai) {
       throw new ServiceUnavailableException("OPENAI_API_KEY is required for text-to-speech.");
     }
 
     const audio = await this.openai.audio.speech.create({
       model: "gpt-4o-mini-tts",
-      voice: dto.voice ?? "alloy",
+      voice: isTtsVoice(dto.voice) ? dto.voice : "alloy",
       input: dto.text,
       response_format: "mp3"
     });
@@ -108,6 +160,21 @@ export class AiService {
     const contextText = context.map((item) => item.text).join(" ");
     const base = modulePolicies[dto.module] ?? modulePolicies.FAN;
     return `${base} Recommended action: ${contextText || "use the lowest-risk route, monitor crowd density, and escalate urgent incidents to stadium command."}`;
+  }
+
+  private fallbackResponse(
+    dto: AiChatDto,
+    context: Array<{ id: string; text: string }>,
+    provider: AiResponseProvider
+  ) {
+    return {
+      module: dto.module,
+      provider,
+      answer: this.localAnswer(dto, context),
+      confidence: 0.74,
+      citations: context.map((item) => item.id),
+      actions: this.actionsFor(dto.module)
+    };
   }
 
   private actionsFor(module: string) {

@@ -1,4 +1,4 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { loginSchema } from "@/lib/schemas";
 
@@ -12,15 +12,16 @@ type AuthorizedUser = {
   roles: string[];
 };
 
-export const authConfig = {
+export const authOptions = {
   session: {
     strategy: "jwt"
   },
   providers: [
     Credentials({
+      name: "Credentials",
       credentials: {
-        email: {},
-        password: {}
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
@@ -71,6 +72,6 @@ export const authConfig = {
   pages: {
     signIn: "/login"
   }
-} satisfies NextAuthConfig;
+} satisfies NextAuthOptions;
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+export const authHandler = NextAuth(authOptions);

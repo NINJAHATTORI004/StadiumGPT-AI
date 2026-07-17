@@ -13,7 +13,6 @@ import {
   ShieldAlert,
   Siren,
   TrainFront,
-  UsersRound,
   Accessibility
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString, MinLength } from "class-validator";
+import { IsIn, IsOptional, IsString, MinLength } from "class-validator";
 
 export class SpeakDto {
   @ApiProperty({ example: "Use Gate D for the lowest queue and step-free route." })
@@ -7,9 +7,8 @@ export class SpeakDto {
   @MinLength(2)
   text!: string;
 
-  @ApiProperty({ example: "alloy", required: false })
+  @ApiProperty({ example: "alloy", required: false, enum: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] })
   @IsOptional()
-  @IsString()
+  @IsIn(["alloy", "echo", "fable", "onyx", "nova", "shimmer"])
   voice?: string;
 }
-

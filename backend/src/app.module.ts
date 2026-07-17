@@ -14,11 +14,9 @@ import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ 
+    ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === "development" 
-        ? ".env.development" 
-        : ".env"
+      envFilePath: [".env", ".env.development"]
     }),
     CacheModule.register({
       isGlobal: true,

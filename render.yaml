@@ -32,7 +32,7 @@ services:
       - key: ZENMUX_API_KEY
         sync: false
       - key: ZENMUX_MODEL
-        value: moonshotai/kimi-k3
+        value: openai/gpt-5
       - key: ZENMUX_BASE_URL
         value: https://zenmux.ai/api/v1
     healthCheckPath: /api/health

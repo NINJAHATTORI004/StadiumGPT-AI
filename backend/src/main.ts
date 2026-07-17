@@ -12,7 +12,7 @@ import { SanitizeInterceptor } from "./common/interceptors/sanitize.interceptor"
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const config = app.get(ConfigService);
-  const origin = config.get<string>("CORS_ORIGIN") ?? "http://localhost:3000";
+  const origin = config.get<string>("CORS_ORIGIN") ?? "http://localhost:3000,http://127.0.0.1:3100,http://localhost:3100";
 
   app.setGlobalPrefix("api");
   app.use(helmet());

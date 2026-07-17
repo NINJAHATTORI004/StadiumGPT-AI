@@ -2,18 +2,11 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": ".next-build/standalone",
-  "installCommand": "cd .. && npm install && npm run prisma:generate -w backend || true",
+  "installCommand": "npm install",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url",
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
-    "NEXTAUTH_URL": "@nextauth_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret"
-  },
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "@backend_url/api/:path*"
-    }
-  ]
+    "NEXT_PUBLIC_API_URL": "https://backend-beige-eight-56.vercel.app/api",
+    "NEXT_PUBLIC_APP_URL": "https://frontend-liard-three-30.vercel.app",
+    "NEXTAUTH_URL": "https://frontend-liard-three-30.vercel.app"
+  }
 }

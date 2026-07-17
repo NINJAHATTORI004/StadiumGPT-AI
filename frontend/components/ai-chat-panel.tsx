@@ -54,30 +54,34 @@ export function AiChatPanel({
     setMessages((current) => [...current, userMessage]);
     setInput("");
 
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}`;
+    console.debug("AI chat request", { apiUrl, module, language, message: trimmed });
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}/ai/chat`, {
+      const response = await fetch(`/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ module, language, message: trimmed })
       });
 
+      const status = response.status;
+      const text = await response.text();
+      console.debug("AI chat response", { status, body: text });
+
       if (!response.ok) {
-        throw new Error("AI request failed");
+        throw new Error(`AI request failed: ${status}`);
       }
 
-      const data = (await response.json()) as { answer: string };
+      const data = JSON.parse(text) as { answer: string };
       setMessages((current) => [
         ...current,
         { id: crypto.randomUUID(), role: "assistant", content: data.answer }
       ]);
-    } catch {
+    } catch (err) {
+      console.error("AI chat error:", err);
       setMessages((current) => [
         ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "Gate D has the lowest current density, elevator access, and a step-free route to section 232. I would avoid Gate C for the next 18 minutes because queue sensors show elevated congestion."
-        }
+        { id: crypto.randomUUID(), role: "assistant", content: "Sorry, I couldn't reach the AI service. Try again." }
       ]);
     }
   }

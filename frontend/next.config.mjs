@@ -9,6 +9,8 @@ const securityHeaders = [
   }
 ];
 
+const isDev = process.env.NODE_ENV !== "production";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: ".next-build",
@@ -23,6 +25,15 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: securityHeaders
+      }
+    ];
+  },
+  async rewrites() {
+    if (!isDev) return [];
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://127.0.0.1:4000/api/:path*"
       }
     ];
   }

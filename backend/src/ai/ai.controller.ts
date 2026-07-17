@@ -16,18 +16,24 @@ import { AiChatDto } from "./dto/ai-chat.dto";
 import { SpeakDto } from "./dto/speak.dto";
 
 @ApiTags("ai")
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller("ai")
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post("chat")
-  chat(@CurrentUser() user: JwtUser, @Body() dto: AiChatDto) {
-    return this.aiService.chat(user, dto);
+  chat(@Body() dto: AiChatDto) {
+    const guestUser: JwtUser = {
+      sub: "anonymous",
+      email: "guest@stadiumgpt.ai",
+      name: "Guest",
+      roles: ["FAN"]
+    };
+    return this.aiService.chat(guestUser, dto);
   }
 
   @Post("transcribe")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FileInterceptor("file"))
   transcribe(@UploadedFile() file: Express.Multer.File) {
@@ -35,8 +41,9 @@ export class AiController {
   }
 
   @Post("speak")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   speak(@Body() dto: SpeakDto) {
     return this.aiService.speak(dto);
   }
 }
-

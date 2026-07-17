@@ -16,7 +16,7 @@ services:
           name: stadiumgpt-db
           property: connectionString
       - key: REDIS_URL
-        value: redis://redacted@stadiumgpt-redis.internal:6379
+        value: redis://localhost:6379
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN

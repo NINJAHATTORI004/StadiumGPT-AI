@@ -4,6 +4,7 @@
   "outputDirectory": ".next-build/standalone",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "ignoreCommand": "git -C ../ rev-parse --is-inside-work-tree 2>/dev/null || true",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://stadiumgpt-backend.onrender.com/api",
     "NEXT_PUBLIC_APP_URL": "https://stadiumgpt-frontend.onrender.com",

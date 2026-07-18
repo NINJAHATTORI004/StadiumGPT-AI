@@ -54,11 +54,11 @@ export function AiChatPanel({
     setMessages((current) => [...current, userMessage]);
     setInput("");
 
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api"}`;
-    console.debug("AI chat request", { apiUrl, module, language, message: trimmed });
+    console.debug("AI chat request", { apiUrl: process.env.NEXT_PUBLIC_API_URL, module, language, message: trimmed });
 
     try {
-      const response = await fetch(`/api/ai/chat`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+      const response = await fetch(`${apiUrl}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ module, language, message: trimmed })
